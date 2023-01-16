@@ -81,10 +81,14 @@ def get_lane_emden_radius(n, radius_guess):
     tol = 1e-3  # tolerance for theta
     stop = False
 
+    dtheta_surface = 0
+
     while not stop:
         solution = solve_ivp(lane_emden_ode_sys, t_span=[0, lane_emden_radius], y0=[0, 1], args=[n]).y
         theta = solution[1]  # solution[0] is theta prime, solution[1] is theta. get the whole vector of theta
+        dtheta = solution[0]
         theta_surface = theta[-1]  # get theta evaluated at xi = radius guess
+        dtheta_surface = dtheta[-1]
 
         if tol > theta_surface > 0:  # tolerance criteria satisfied if radius is smaller than tolerance and non-negative
             stop = True
@@ -93,30 +97,21 @@ def get_lane_emden_radius(n, radius_guess):
                 lane_emden_radius *= 0.999  # so, decrease the radius guess
             elif theta_surface > tol:  # theta > tol means we are not close enough to surface from the interior
                 lane_emden_radius /= 0.999  # so, increase the radius guess
-            x_span = numpy.linspace(0, lane_emden_radius)  # adjust integration bounds based on new radius guess
 
-    return lane_emden_radius
+    return lane_emden_radius, dtheta_surface
 
 
-def newton_c():
-    # get white dwarf radius and mass data from the file
-    white_dwarf_data = get_data()
-    radius_data = white_dwarf_data[:, 0]
-    mass_data = white_dwarf_data[:, 1]
-
-    # sort radius and mass data in corresponding fashion w/ radius as the key. numpy.sort() breaks correspondence
-    indices = radius_data.argsort()[::-1]
-    radius_data = radius_data[indices]
-    mass_data = mass_data[indices]
-
+def newton_b(radius_data, mass_data):
     # plot white dwarf masses as a function of radius (experimental data)
-    marker_area = 5 * numpy.ones(white_dwarf_data.shape[0])  # parameter for sizes of the points on the scatter plot
+    marker_area = 5 * numpy.ones(radius_data.shape[0])  # parameter for sizes of the points on the scatter plot
     pyplot.scatter(radius_data, mass_data, s=marker_area)
     pyplot.title("White dwarf mass vs radius scatter plot")
     pyplot.xlabel("radius (in average earth radii)")
     pyplot.ylabel("mass (in solar masses)")
     pyplot.show()
 
+
+def newton_c(radius_data, mass_data):
     lin_fit_count = data_point_counter(radius_data)  # get number of points to be used in the linear fit
     mass_radius_slope = mass_radius_lin_fit(radius_data[:lin_fit_count],
                                             mass_data[:lin_fit_count])  # get slope of linear mass - radius fit
@@ -135,7 +130,7 @@ def newton_c():
 
     # refine lane - emden radius by evolving the lane - emden equation, but using the value obtained via Taylor series
     # as initial guess
-    radius_lane_emden = get_lane_emden_radius(n, radius_lane_emden)
+    radius_lane_emden, dtheta_surface = get_lane_emden_radius(n, radius_lane_emden)
     print("Radius from Lane - Emden integration: ", radius_lane_emden)
 
     # dTheta / dXi in Lane - Emden equation, evaluated at the star surface (i.e., at the obtained scaled radius value)
@@ -174,8 +169,9 @@ def newton_c():
 
     # calculate central density for each star from the data set
     for i in range(radius_data.shape[0]):
-        rho_center = numpy.power(4 * numpy.pi * gravitational_const /  # from R = alpha * xi by isolating for rho(c)
-                                 (k_fit_param * (n + 1)) * (radius_data[i] / radius_lane_emden) ** 2, n / (n - 1))
+        m = mass_data[i]
+        rho_center = numpy.power(m * numpy.power(k_fit_param / gravitational_const * (n + 1) / (4 * numpy.pi), -3/2) /
+                                 (4 * numpy.pi * -1 * radius_lane_emden**2 * dtheta_surface), 2 * n / (3 - n))
         rho_center_data[i] = rho_center
 
     marker_area = 5 * numpy.ones(mass_data.shape[0])  # parameter for sizes of the points on the scatter plot
@@ -187,7 +183,18 @@ def newton_c():
 
 
 def main():
-    newton_c()
+    # get white dwarf radius and mass data from the file
+    white_dwarf_data = get_data()
+    radius_data = white_dwarf_data[:, 0]
+    mass_data = white_dwarf_data[:, 1]
+
+    # sort radius and mass data in corresponding fashion w/ radius as the key. numpy.sort() breaks correspondence
+    indices = radius_data.argsort()[::-1]
+    radius_data = radius_data[indices]
+    mass_data = mass_data[indices]
+
+    newton_b(radius_data, mass_data)
+    newton_c(radius_data, mass_data)
 
 
 main()
