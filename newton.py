@@ -58,45 +58,34 @@ def lane_emden_taylor(x, n):
     return 1 - 1 / 6 * x ** 2 + n / 120 * x ** 4 - n * (8 * n - 5) / 15120 * x ** 6
 
 
-# given parameters thetha & 1st derivative of theta w.r.t xi, returns the 2nd derivative and the 1st derivative.
+# given parameters theta & 1st derivative of theta w.r.t xi, returns the 2nd derivative and the 1st derivative.
 def lane_emden_ode_sys(x, system, n):
     dtheta_dx = system[0]
     theta = system[1]
 
     if x == 0:
-        d2theta_dx2 = -1 * theta ** n
+        d2theta_dx2 = -1 * theta ** n  # at the origin, the other term vanishes
     else:
-        d2theta_dx2 = -2 / x * dtheta_dx - theta ** n
+        d2theta_dx2 = -2 / x * dtheta_dx - theta ** n  # by expanding Lane - Emden & isolating for 2nd derivative
 
     return [d2theta_dx2, dtheta_dx]
 
 
-# starting with the guess for Lane - Emden radius from the Taylor series, evolves theta using the ode defined in
-# lane_emden_ode_sys() above from xi = 0 to xi = radius guess. Checks the value of theta at the surface (i.e, at the
-# radius guess value). From theory, theta(surface) = 0, so we adjust the radius guess depending on the sign of
-# theta(surface) with the current radius guess.
+def theta_root(x, system, n):
+    return system[1]
+
+
+theta_root.terminal = True
+
+
+# evolves Lane - Emden equation until the surface is reached. Upper boundary on the radius is calculated from
+# the results of Taylor series root-finding. In practice, solve_ivp() stops before the upper bound, when theta = 0, i.e,
+# surface is reached.
 def get_lane_emden_radius(n, radius_guess):
-    lane_emden_radius = radius_guess  # guess from the Taylor series
-    x_span = numpy.linspace(0, lane_emden_radius)  # domain of integration, from 0 to the radius guess
-    tol = 1e-3  # tolerance for theta
-    stop = False
-
-    dtheta_surface = 0
-
-    while not stop:
-        solution = solve_ivp(lane_emden_ode_sys, t_span=[0, lane_emden_radius], y0=[0, 1], args=[n]).y
-        theta = solution[1]  # solution[0] is theta prime, solution[1] is theta. get the whole vector of theta
-        dtheta = solution[0]
-        theta_surface = theta[-1]  # get theta evaluated at xi = radius guess
-        dtheta_surface = dtheta[-1]
-
-        if tol > theta_surface > 0:  # tolerance criteria satisfied if radius is smaller than tolerance and non-negative
-            stop = True
-        else:
-            if theta_surface < 0:  # theta < 0 is physically meaningless and means we stepped outside the surface
-                lane_emden_radius *= 0.999  # so, decrease the radius guess
-            elif theta_surface > tol:  # theta > tol means we are not close enough to surface from the interior
-                lane_emden_radius /= 0.999  # so, increase the radius guess
+    lane_emden_radius_limit = 2 * radius_guess  # twice the guess from the Taylor series
+    solution = solve_ivp(lane_emden_ode_sys, t_span=[0, lane_emden_radius_limit], y0=[0, 1], events=theta_root, args=[n])
+    lane_emden_radius = solution.t[-1]
+    dtheta_surface = solution.y[0, -1]
 
     return lane_emden_radius, dtheta_surface
 
@@ -182,6 +171,10 @@ def newton_c(radius_data, mass_data):
     pyplot.show()
 
 
+def newton_d(radius_data, mass_data):
+    print()
+
+
 def main():
     # get white dwarf radius and mass data from the file
     white_dwarf_data = get_data()
@@ -195,6 +188,7 @@ def main():
 
     newton_b(radius_data, mass_data)
     newton_c(radius_data, mass_data)
+    newton_d(radius_data, mass_data)
 
 
 main()
