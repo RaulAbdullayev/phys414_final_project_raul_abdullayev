@@ -190,5 +190,3 @@ def main():
     newton_c(radius_data, mass_data)
     newton_d(radius_data, mass_data)
 
-
-main()
