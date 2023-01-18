@@ -171,10 +171,6 @@ def newton_c(radius_data, mass_data):
     pyplot.show()
 
 
-def newton_d(radius_data, mass_data):
-    print()
-
-
 def main():
     # get white dwarf radius and mass data from the file
     white_dwarf_data = get_data()
@@ -188,5 +184,4 @@ def main():
 
     newton_b(radius_data, mass_data)
     newton_c(radius_data, mass_data)
-    newton_d(radius_data, mass_data)
 

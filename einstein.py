@@ -94,7 +94,7 @@ def einstein_a_b_c():
     pyplot.plot(radius_data, fractional_binding_energies)
     pyplot.xlabel("Radius (in km)")
     pyplot.ylabel("Fractional binding energy")
-    pyplot.title("NS Fractional Energy as a Function of Radius")
+    pyplot.title("NS Fractional Binding Energy as a Function of Radius")
     pyplot.show()
 
     solar_mass = 1.989e30  # kg
@@ -116,10 +116,10 @@ def einstein_a_b_c():
     # plot mass vs central density differently, depending on the dm/drho stability criterion
     pyplot.plot(rho_center_vec[:len(mass_stable)], mass_stable)
     pyplot.plot(rho_center_vec[len(mass_stable)::], mass_unstable, '--')
-    pyplot.xlabel("Central density (geometric units)")
+    pyplot.xlabel("Central density (kg / m^3)")
     pyplot.ylabel("Mass (solar masses)")
     pyplot.title("NS Mass as a Function of Central Density")
-    pyplot.legend(['Stable mass range','Unstable mass range'])
+    pyplot.legend(['Stable mass range', 'Unstable mass range'])
     pyplot.show()
 
 
